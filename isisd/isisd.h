@@ -256,6 +256,9 @@ struct isis_area {
 	uint64_t id_len_mismatches[2];
 	uint64_t lsp_error_counter[2];
 
+	struct list *leaking_settings;
+	struct list *leaking_list[2];
+
 	QOBJ_FIELDS;
 };
 DECLARE_QOBJ_TYPE(isis_area);

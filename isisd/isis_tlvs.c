@@ -115,7 +115,6 @@ static const struct tlv_ops *const tlv_table[ISIS_CONTEXT_MAX][ISIS_TLV_MAX];
 /* End of _ops forward definition. */
 
 /* Prototypes */
-static void append_item(struct isis_item_list *dest, struct isis_item *item);
 static void init_item_list(struct isis_item_list *items);
 
 static struct isis_subsubtlvs *
@@ -4041,6 +4040,14 @@ out:
 	return 1;
 }
 
+/*Functions for redistribte routes inside IS-IS*/
+struct isis_item *copy_leaking_ip(struct isis_item* i) 
+{
+        struct isis_item* rv = copy_item_extended_ip_reach(i);
+
+        return rv;
+}
+
 /* Functions related to TLV 137 Dynamic Hostname */
 
 static char *copy_tlv_dynamic_hostname(const char *hostname)
@@ -4673,6 +4680,13 @@ out:
 	if (rv)
 		free_item_ipv6_reach((struct isis_item *)rv);
 	return 1;
+}
+
+/*Functions for redistribte routes inside IS-IS*/
+struct isis_item* copy_leaking_ipv6(struct isis_item* i) {
+        struct isis_item* rv = copy_item_ipv6_reach(i);
+
+        return rv;
 }
 
 /* Functions related to TLV 242 Router Capability as per RFC7981 */
@@ -6071,7 +6085,7 @@ too_long:
 }
 #define pack_items(...) pack_items_(ISIS_MT_IPV4_UNICAST, __VA_ARGS__)
 
-static void append_item(struct isis_item_list *dest, struct isis_item *item)
+void append_item(struct isis_item_list *dest, struct isis_item *item)
 {
 	*dest->tail = item;
 	dest->tail = &(*dest->tail)->next;
