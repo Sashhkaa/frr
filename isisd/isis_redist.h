@@ -28,8 +28,8 @@ struct isis_leaking {
 	int redist;
 	int family;
 	int type;
-	int level;
-	int level_tmp;
+	int level_to;
+	int level_from;
 	uint32_t metric;
 	char *map_name;
 	struct route_map *map;
@@ -87,7 +87,7 @@ void isis_redist_update_route_leaking(struct isis_area *aria,
 void isis_redist_init(void);
 void isis_redist_area_finish(struct isis_area *area);
 void isis_iteration_in_lspdb(struct isis_area *area, struct isis_leaking *redist);
-void isis_redist_set_route_leaking(struct isis_area *area, int level,
+void isis_route_leaking_set(struct isis_area *area, int level,
 				    int family, int type, uint32_t metric,
 				    const char *routemap, int originate_type,
 				    uint16_t table);

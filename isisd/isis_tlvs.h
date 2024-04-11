@@ -781,7 +781,7 @@ struct list *isis_fragment_tlvs(struct isis_tlvs *tlvs, size_t size);
 #define ISIS_SABM_FLAG_S 0x40 /* Segment Routing Policy */
 #define ISIS_SABM_FLAG_L 0x20 /* Loop-Free Alternate */
 #define ISIS_SABM_FLAG_X 0x10 /* Flex-Algorithm - RFC9350 */
-void append_item(struct isis_item_list *dest, struct isis_item *item);
+
 void isis_tlvs_add_auth(struct isis_tlvs *tlvs, struct isis_passwd *passwd);
 void isis_tlvs_add_area_addresses(struct isis_tlvs *tlvs,
 				  struct list *addresses);
@@ -899,6 +899,10 @@ void isis_tlvs_add_srv6_lan_endx_sid(struct isis_ext_subtlvs *exts,
 				     struct isis_srv6_lan_endx_sid_subtlv *lan);
 void isis_tlvs_del_srv6_lan_endx_sid(struct isis_ext_subtlvs *exts,
 				     struct isis_srv6_lan_endx_sid_subtlv *lan);
-struct isis_item *copy_leaking_ip(struct isis_item* i);
-struct isis_item *copy_leaking_ipv6(struct isis_item* i);
+
+/*Functions for redistribte routes inside IS-IS*/
+void copy_leaking_extended_ip_reach(struct isis_tlvs* tlvs, struct isis_item* ip_reach_s,
+                                                        uint32_t metric);
+void copy_leaking_ipv6_reach(struct isis_tlvs *tlvs, struct isis_item *ipv6_reach_s,
+                                        uint32_t metric);
 #endif

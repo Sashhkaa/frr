@@ -1458,7 +1458,7 @@ void leaking_apply_finish(const struct lyd_node *dnode, int family)
 	if (yang_dnode_exists(dnode, "./route-map"))
 		routemap = yang_dnode_get_string(dnode, "./route-map");
 
-	isis_redist_set_route_leaking(area, level, family, type, metric,
+	isis_route_leaking_set(area, level, family, type, metric,
 				       routemap, 0, 0);
 
 	lsp_regenerate_schedule(area, IS_LEVEL_1, 0);
@@ -1546,7 +1546,7 @@ int isis_instance_route_leaking_ipv4_table_create(struct nb_cb_create_args *args
 	if (yang_dnode_exists(args->dnode, "route-map"))
 		routemap = yang_dnode_get_string(args->dnode, "route-map");
 
-	isis_redist_set_route_leaking(area, level, AF_INET, type, metric,
+	isis_route_leaking_set(area, level, AF_INET, type, metric,
 				       routemap, 0, table);
 
 	return NB_OK;

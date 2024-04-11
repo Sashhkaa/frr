@@ -115,6 +115,7 @@ static const struct tlv_ops *const tlv_table[ISIS_CONTEXT_MAX][ISIS_TLV_MAX];
 /* End of _ops forward definition. */
 
 /* Prototypes */
+static void append_item(struct isis_item_list *dest, struct isis_item *item);
 static void init_item_list(struct isis_item_list *items);
 
 static struct isis_subsubtlvs *
@@ -4041,11 +4042,13 @@ out:
 }
 
 /*Functions for redistribte routes inside IS-IS*/
-struct isis_item *copy_leaking_ip(struct isis_item* i) 
+void copy_leaking_extended_ip_reach(struct isis_tlvs* tlvs, struct isis_item* ip_reach_s,
+							uint32_t metric) 
 {
-        struct isis_item* rv = copy_item_extended_ip_reach(i);
+	struct isis_extended_ip_reach *ip_reach_d = (struct isis_extended_ip_reach*)copy_item_extended_ip_reach(ip_reach_s);
 
-        return rv;
+	ip_reach_d->metric = metric;
+        append_item(&tlvs->extended_ip_reach, (struct isis_item*)ip_reach_d);
 }
 
 /* Functions related to TLV 137 Dynamic Hostname */
@@ -4683,10 +4686,13 @@ out:
 }
 
 /*Functions for redistribte routes inside IS-IS*/
-struct isis_item* copy_leaking_ipv6(struct isis_item* i) {
-        struct isis_item* rv = copy_item_ipv6_reach(i);
+void copy_leaking_ipv6_reach(struct isis_tlvs *tlvs, struct isis_item *ipv6_reach_s,
+					uint32_t metric) 
+{
+	struct isis_ipv6_reach *ipv6_reach_d = (struct isis_ipv6_reach*)copy_item_ipv6_reach(ipv6_reach_s);
 
-        return rv;
+	ipv6_reach_d = metric;
+        append_item(&tlvs->ipv6_reach, (struct isis_item*)ipv6_reach_d);
 }
 
 /* Functions related to TLV 242 Router Capability as per RFC7981 */

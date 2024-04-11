@@ -1045,24 +1045,17 @@ static void lsp_build_leaking_reach(struct isis_lsp *lsp,
 
 	for (ALL_LIST_ELEMENTS_RO(area->leaking_list[lsp->level - 1], node,
 								leaking)) {
-		if(leaking->extended_ip_reach) {
-			for (ALL_LIST_ELEMENTS_RO(leaking->extended_ip_reach, node, ip_reach_s)) {
-				struct isis_extended_ip_reach *ip_reach_d = (struct isis_extended_ip_reach*)copy_leaking_ip((struct isis_item*)ip_reach_s);
-				ip_reach_d->metric = metric; 
-				append_item(&lsp->tlvs->extended_ip_reach, (struct isis_item*)ip_reach_d);
-			}	
-		}
+		if(leaking->extended_ip_reach)
+			for (ALL_LIST_ELEMENTS_RO(leaking->extended_ip_reach, node, ip_reach_s))
+				copy_leaking_extended_ip_reach(lsp->tlvs, (struct isis_item*)ip_reach_s, metric);	
 
-		if(leaking->ipv6_reach) {
-				for (ALL_LIST_ELEMENTS_RO(leaking->ipv6_reach, node, ipv6_reach_s)) {
-				struct isis_ipv6_reach *ipv6_reach_d = (struct isis_ipv6_reach*)copy_leaking_ipv6((struct isis_item*)ipv6_reach_s);
-				append_item(&lsp->tlvs->ipv6_reach, (struct isis_item*)ipv6_reach_d);
-			}
-		}
+		if(leaking->ipv6_reach) 
+			for (ALL_LIST_ELEMENTS_RO(leaking->ipv6_reach, node, ipv6_reach_s))
+			       copy_leaking_ipv6_reach(lsp->tlvs, (struct isis_item*)ipv6_reach_s, metric);	
 	}
 
-list_delete_all_node(area->leaking_list[LVL_ISIS_LEAKING_1]);
-list_delete_all_node(area->leaking_list[LVL_ISIS_LEAKING_2]);
+	list_delete_all_node(area->leaking_list[LVL_ISIS_LEAKING_1]);
+	list_delete_all_node(area->leaking_list[LVL_ISIS_LEAKING_2]);
 
 }
 
@@ -1132,20 +1125,18 @@ static int check_prefix_before_add_ipv6(struct isis_ipv6_reach *r, struct isis_l
 static void add_prefix_from_l1_into_l2(struct isis_area *area, struct isis_lsp *lsp_d,
 				struct isis_lsp *lsp_s)
 {
-	for (struct isis_item *i = lsp_s->tlvs->extended_ip_reach.head; i;
-												i = i->next) {
-		if(check_prefix_before_add_ip((struct isis_extended_ip_reach*)i, lsp_d)) {
-			struct isis_item* ip_reach_d = 
-			(struct isis_item*)copy_leaking_ip(i);
-			append_item(&lsp_d->tlvs->extended_ip_reach, ip_reach_d);
-		}
+	for (struct isis_item *i = lsp_s->tlvs->extended_ip_reach.head; i; i = i->next) {
+		struct isis_extended_ip_reach *ip_reach_s = (struct isis_extended_ip_reach*)i;
+
+		if(check_prefix_before_add_ip(ip_reach_s, lsp_d))
+			copy_leaking_extended_ip_reach(lsp_d->tlvs, (struct isis_item*)ip_reach_s, ip_reach_s->metric); 
 	}
-	for (struct isis_item *i = lsp_s->tlvs->ipv6_reach.head; i;
-												i = i->next) {
-		if (check_prefix_before_add_ipv6((struct isis_ipv6_reach*)i, lsp_d)) {
-			struct isis_item* ipv6_reach_d = copy_leaking_ipv6(i);
-			append_item(&lsp_d->tlvs->ipv6_reach, (struct isis_item*)ipv6_reach_d);
-		}
+
+	for (struct isis_item *i = lsp_s->tlvs->ipv6_reach.head; i; i = i->next) {
+		struct isis_ipv6_reach *ipv6_reach_s = (struct isis_ipv6_reach*)i;
+
+		if (check_prefix_before_add_ipv6(ipv6_reach_s, lsp_d))
+			copy_leaking_ipv6_reach(lsp_d->tlvs, (struct isis_item*)ipv6_reach_s, ipv6_reach_s->metric);
 	}
 }
 
@@ -1550,7 +1541,7 @@ static void lsp_build(struct isis_lsp *lsp, struct isis_area *area)
 	for (ALL_LIST_ELEMENTS_RO(area->leaking_settings, node_redist, redist)) {
 		isis_iteration_in_lspdb(area, redist);
 		lsp_build_leaking_reach(lsp, area, redist->metric);
-		if (redist->level == LVL_ISIS_LEAKING_2) { 
+		if (redist->level_to == LVL_ISIS_LEAKING_2) { 
 			leaking_flag = false;
 		}
 	}

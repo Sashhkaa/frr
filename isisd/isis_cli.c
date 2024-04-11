@@ -1438,20 +1438,23 @@ DEFPY_YANG(isis_redistribute, isis_redistribute_cmd,
  * XPath: /frr-isisd:isis/instance/route_leaking
  */
 DEFPY_YANG(isis_leaking, isis_leaking_cmd,
-           "[no] route_leaking <ipv4|ipv6>$ip"
-           "<level2_to_level1|level1_to_level2>$level"
+           "[no] redistribute <ipv4$ip isis$proto|ipv6$ip isis$proto>"
+           "<level-1|level-2>$level into <level2|level1>$level_to "
            "[{metric (0-16777215)|route-map RMAP_NAME$route_map}]",
            NO_STR LEAKING_STR "Redistribute IPv4 routes\n"
+	   			"IS-IS routing protocol \n"
                                "Redistribute IPv6 routes\n"
-                               "Redistribute level-1 into level-2\n"
-                               "Redistribute level-2 into level-2\n"
+			       "IS-IS routing protocol\n"
+                               "Inter-area routes from level-1\n"
+			       "Inter-area routes from level-2\n"
+                               "from level-n into level-m"
+			       "Inter-area routes into level-1\n"
+			       "Inter-area routes into level-2\n"
                                "Metric for redistributed routes\n"
                                "IS-IS default metric\n"
                                "Route map reference\n"
                                "Pointer to route-map entries\n")
 {
-        char proto[] = "isis";
-
         if (no)
                 nb_cli_enqueue_change(vty, ".", NB_OP_DESTROY, NULL);
         else {
@@ -1462,7 +1465,7 @@ DEFPY_YANG(isis_leaking, isis_leaking_cmd,
                 nb_cli_enqueue_change(vty, "./metric", NB_OP_MODIFY,
                                       metric_str ? metric_str : NULL);
         }
-
+	zlog_debug("level = %s", level);	
         return nb_cli_apply_changes(vty,
                                     "./route_leaking/%s[protocol='%s'][level='%s']",
                                     ip, proto, level);

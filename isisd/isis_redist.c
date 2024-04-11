@@ -302,7 +302,7 @@ static void isis_leaking_apply_match_ip_reach(struct isis_area* area,
 		leaking->extended_ip_reach = list_new();
 		listnode_add(leaking->extended_ip_reach, ip_reach);
 		leaking->metric = area_info.metric; 
-		listnode_add(area->leaking_list[redist->level],
+		listnode_add(area->leaking_list[redist->level_to],
 					leaking);
 	}
 }
@@ -322,7 +322,7 @@ static void isis_leaking_apply_match_ipv6_reach(struct isis_area* area,
 		leaking->ipv6_reach = list_new();
                	listnode_add(leaking->ipv6_reach, ipv6_reach);
 		leaking->metric = area_info.metric;  
-		listnode_add(area->leaking_list[redist->level],
+		listnode_add(area->leaking_list[redist->level_to],
 					leaking);
 	}
 
@@ -354,14 +354,14 @@ static void isis_matching_leaking_prefix(struct isis_area *area, struct isis_lsp
 void isis_iteration_in_lspdb(struct isis_area *area, struct isis_leaking *redist)
 {
 	struct isis_lsp *lsp;
-	struct lspdb_head *head_tmp = &area->lspdb[redist->level_tmp];
+	struct lspdb_head *head_tmp = &area->lspdb[redist->level_from];
 	
 	if (head_tmp)
 		frr_each (lspdb, head_tmp, lsp) 
 			isis_matching_leaking_prefix(area, lsp, redist);
 }
 
-void isis_redist_set_route_leaking(struct isis_area *area, int level,
+void isis_route_leaking_set(struct isis_area *area, int level,
 				    int family, int type, uint32_t metric,
 				    const char *routemap, int originate_type,
 				    uint16_t table)
@@ -377,12 +377,12 @@ void isis_redist_set_route_leaking(struct isis_area *area, int level,
 	redist->table = table;
 	redist->map_name = (char *)routemap;
 
-	if (level == LEVEL2_TO_LEVEL1) {
-		redist->level_tmp = LVL_ISIS_LEAKING_2;
-		redist->level = LVL_ISIS_LEAKING_1;
+	if (level == IS_LEVEL_2) {
+		redist->level_from = LVL_ISIS_LEAKING_2;
+		redist->level_to = LVL_ISIS_LEAKING_1;
 	} else {
-		redist->level_tmp = LVL_ISIS_LEAKING_1;
-		redist->level = LVL_ISIS_LEAKING_2;
+		redist->level_from = LVL_ISIS_LEAKING_1;
+		redist->level_to = LVL_ISIS_LEAKING_2;
 	}
 
 	listnode_add(area->leaking_settings, redist);
@@ -707,85 +707,6 @@ void isis_redist_area_finish(struct isis_area *area)
 }
 
 #ifdef FABRICD
-DEFUN(isis_leaking, isis_leaking_cmd,
-      "route_leaking <ipv4 " PROTO_IP_REDIST_STR "|ipv6 " PROTO_IP6_REDIST_STR
-      "> route-map RMAP_NAME}]",
-      ROUTE_LEAKING "Redistribute IPv4 routes\n" PROTO_IP_REDIST_HELP
-		     "Redistribute IPv6 routes\n" PROTO_IP6_REDIST_HELP
-		     "Route map reference\n"
-		     "Pointer to route-map entries\n")
-{
-	int idx_afi = 1;
-	int idx_protocol = 2;
-	int idx_metric_rmap = 1;
-	int family;
-	int afi;
-	int type;
-	int level;
-	unsigned long metric = 0;
-	const char *routemap = NULL;
-
-	VTY_DECLVAR_CONTEXT(isis_area, area);
-	family = str2family(argv[idx_afi]->text);
-	if (family < 0)
-		return CMD_WARNING_CONFIG_FAILED;
-
-	afi = family2afi(family);
-	if (!afi)
-		return CMD_WARNING_CONFIG_FAILED;
-
-	type = proto_redistnum(afi, argv[idx_protocol]->text);
-	if (type < 0)
-		return CMD_WARNING_CONFIG_FAILED;
-
-	level = 2;
-
-	if ((area->is_type & level) != level) {
-		vty_out(vty, "Node is not a level-%d IS\n", level);
-		return CMD_WARNING_CONFIG_FAILED;
-	}
-	idx_metric_rmap = 1;
-	if (argv_find(argv, argc, "route-map", &idx_metric_rmap))
-		routemap = argv[idx_metric_rmap + 1]->arg;
-
-	isis_redist_set(area, level, family, type, metric, routemap, 0, 0);
-	return 0;
-}
-
-DEFUN(no_isis_leaking, no_isis_leaking_cmd,
-      "no route_leaking <ipv4 " PROTO_IP_REDIST_STR
-      "|ipv6 " PROTO_IP6_REDIST_STR "> route-map RMAP_NAME}]",
-      ROUTE_LEAKING "Redistribute IPv4 routes\n" PROTO_IP_REDIST_HELP
-		     "Redistribute IPv6 routes\n" PROTO_IP6_REDIST_HELP
-		     "Route map reference\n"
-		     "Pointer to route-map entries\n")
-{
-	int idx_afi = 2;
-	int idx_protocol = 3;
-	int type;
-	int level;
-	int family;
-	int afi;
-
-	VTY_DECLVAR_CONTEXT(isis_area, area);
-	family = str2family(argv[idx_afi]->arg);
-	if (family < 0)
-		return CMD_WARNING_CONFIG_FAILED;
-
-	afi = family2afi(family);
-	if (!afi)
-		return CMD_WARNING_CONFIG_FAILED;
-
-	type = proto_redistnum(afi, argv[idx_protocol]->text);
-	if (type < 0)
-		return CMD_WARNING_CONFIG_FAILED;
-
-	level = 2;
-
-	isis_redist_unset(area, level, family, type, 0);
-	return 0;
-}
-
 DEFUN (isis_redistribute,
        isis_redistribute_cmd,
        "redistribute <ipv4 " PROTO_IP_REDIST_STR "|ipv6 " PROTO_IP6_REDIST_STR ">"
@@ -962,6 +883,94 @@ DEFUN (no_isis_default_originate,
 	isis_redist_unset(area, level, family, DEFAULT_ROUTE, 0);
 	return 0;
 }
+
+DEFUN(isis_leaking, isis_leaking_cmd,
+      "redistribute <ipv4 isis|ipv6 isis>"
+      "[{metric (0-16777215)|route-map RMAP_NAME}]",
+      LEAKING_STR "Redistribute IPv4 routes\n" PROTO_HELP
+                     "Redistribute IPv6 routes\n" PROTO_HELP
+		     "Metric for redistributed routes\n"
+       		     "ISIS default metric\n"
+                     "Route map reference\n"
+                     "Pointer to route-map entries\n")
+{
+        int idx_afi = 1;
+        int idx_protocol = 2;
+        int idx_metric_rmap = 1;
+        int family;
+        int afi;
+        int type;
+        int level;
+        unsigned long metric = 0;
+        const char *routemap = NULL;
+
+        VTY_DECLVAR_CONTEXT(isis_area, area);
+        family = str2family(argv[idx_afi]->text);
+        if (family < 0)
+                return CMD_WARNING_CONFIG_FAILED;
+
+        afi = family2afi(family);
+        if (!afi)
+                return CMD_WARNING_CONFIG_FAILED;
+
+        type = proto_redistnum(afi, argv[idx_protocol]->text);
+        if (type < 0)
+                return CMD_WARNING_CONFIG_FAILED;
+
+        level = 2;
+
+        if ((area->is_type & level) != level) {
+                vty_out(vty, "Node is not a level-%d IS\n", level);
+                return CMD_WARNING_CONFIG_FAILED;
+        }
+        idx_metric_rmap = 1;
+        if (argv_find(argv, argc, "route-map", &idx_metric_rmap))
+                routemap = argv[idx_metric_rmap + 1]->arg;
+
+        isis_route_leaking_set(area, level, family, type, metric, routemap, 0, 0);
+        return 0;
+}
+
+DEFUN (no_isis_leaking,
+       no_isis_leaking_cmd,
+       "no redistribute <ipv4 isis|ipv6 isis>"
+       "[{metric (0-16777215)|route-map RMAP_NAME}]",
+       NO_STR
+       LEAKING_STR
+       "Redistribute IPv4 routes\n"
+       PROTO_HELP
+       "Redistribute IPv6 routes\n" PROTO_HELP
+       "Metric for redistributed routes\n"
+       "ISIS default metric\n"
+       "Route map reference\n"
+       "Pointer to route-map entries\n")
+{
+        int idx_afi = 2;
+        int idx_protocol = 3;
+        VTY_DECLVAR_CONTEXT(isis_area, area);
+        int type;
+        int level;
+        int family;
+        int afi;
+
+        family = str2family(argv[idx_afi]->arg);
+        if (family < 0)
+                return CMD_WARNING_CONFIG_FAILED;
+
+        afi = family2afi(family);
+        if (!afi)
+                return CMD_WARNING_CONFIG_FAILED;
+
+        type = proto_redistnum(afi, argv[idx_protocol]->text);
+        if (type < 0)
+                return CMD_WARNING_CONFIG_FAILED;
+
+        level = 2;
+
+        isis_redist_unset(area, level, family, type, 0);
+        return 0;
+}
+
 #endif /* ifdef FABRICD */
 
 int isis_redist_config_write(struct vty *vty, struct isis_area *area,
@@ -1044,7 +1053,7 @@ int isis_leaking_config_write(struct vty *vty, struct isis_area *area,
 	int type;
 	int level;
 	int write = 0;
-	struct isis_redist *redist;
+	struct isis_leaking *redist;
 	struct list *redist_list;
 	const char *family_str;
 	struct listnode *node;
@@ -1068,10 +1077,11 @@ int isis_leaking_config_write(struct vty *vty, struct isis_area *area,
 			for (ALL_LIST_ELEMENTS_RO(redist_list, node, redist)) {
 				if (!redist->redist)
 					continue;
-				vty_out(vty, " leaking %s %s", family_str,
+				vty_out(vty, " redistribute %s %s", family_str,
 					zebra_route_string(type));
-				if (!fabricd)
-					vty_out(vty, " level-%d", level);
+				vty_out(vty, " level-%d", redist->level_from);
+				vty_out(vty, " into"); 
+				vty_out(vty, " level-%d", redist->level_to);
 				if (redist->map_name)
 					vty_out(vty, " route-map %s",
 						redist->map_name);
@@ -1091,6 +1101,7 @@ void isis_redist_init(void)
 	install_element(ROUTER_NODE, &no_isis_redistribute_cmd);
 
 	install_element(ROUTER_NODE, &isis_leaking_cmd);
+	install_element(ROUTER_NODE, &no_isis_leaking_cmd);
 
 	install_element(ROUTER_NODE, &isis_default_originate_cmd);
 	install_element(ROUTER_NODE, &no_isis_default_originate_cmd);
