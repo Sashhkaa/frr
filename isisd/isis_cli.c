@@ -1439,7 +1439,7 @@ DEFPY_YANG(isis_redistribute, isis_redistribute_cmd,
  */
 DEFPY_YANG(isis_leaking, isis_leaking_cmd,
            "[no] redistribute <ipv4$ip isis$proto|ipv6$ip isis$proto>"
-           "<level-1|level-2>$level into <level2|level1>$level_to "
+           "<level-1|level-2>$level_from <level-2|level-1>$level_to "
            "[{metric (0-16777215)|route-map RMAP_NAME$route_map}]",
            NO_STR LEAKING_STR "Redistribute IPv4 routes\n"
 	   			"IS-IS routing protocol \n"
@@ -1447,7 +1447,6 @@ DEFPY_YANG(isis_leaking, isis_leaking_cmd,
 			       "IS-IS routing protocol\n"
                                "Inter-area routes from level-1\n"
 			       "Inter-area routes from level-2\n"
-                               "from level-n into level-m"
 			       "Inter-area routes into level-1\n"
 			       "Inter-area routes into level-2\n"
                                "Metric for redistributed routes\n"
@@ -1465,10 +1464,10 @@ DEFPY_YANG(isis_leaking, isis_leaking_cmd,
                 nb_cli_enqueue_change(vty, "./metric", NB_OP_MODIFY,
                                       metric_str ? metric_str : NULL);
         }
-	zlog_debug("level = %s", level);	
+	zlog_debug("level = %s", level_from);	
         return nb_cli_apply_changes(vty,
                                     "./route_leaking/%s[protocol='%s'][level='%s']",
-                                    ip, proto, level);
+                                    ip, proto, level_from);
 }
 
 /*

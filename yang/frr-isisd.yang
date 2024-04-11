@@ -1517,12 +1517,19 @@ module frr-isisd {
 
 	  leaf level_from {
   	    type level;
-  	    when "../protocol = \"isis\"";
-            mandatory true;
+  	    when "../protocol = "isis";
             must "(. != \"level-1-2\") and ((../../../is-type = \"level-1-2\") and (. != ../level))";
             description
     	      "IS-IS level from which the routes should be redistributed.";
 	  }
+
+          leaf level_to {
+            type level;
+            when "../protocol = "isis"";
+            must "(. != \"level-1-2\") and ((../../../is-type = \"level-1-2\") and (. != ../level))";
+            description
+              "IS-IS level from which the routes should be redistributed.";
+          }
 
           choice protocol-type {
             case protocol-table {

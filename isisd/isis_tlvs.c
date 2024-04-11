@@ -4691,7 +4691,7 @@ void copy_leaking_ipv6_reach(struct isis_tlvs *tlvs, struct isis_item *ipv6_reac
 {
 	struct isis_ipv6_reach *ipv6_reach_d = (struct isis_ipv6_reach*)copy_item_ipv6_reach(ipv6_reach_s);
 
-	ipv6_reach_d = metric;
+	ipv6_reach_d->metric = metric;
         append_item(&tlvs->ipv6_reach, (struct isis_item*)ipv6_reach_d);
 }
 
