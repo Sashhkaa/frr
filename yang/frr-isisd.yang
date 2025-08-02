@@ -306,14 +306,31 @@ module frr-isisd {
       "Reference to a prefix list.";
   }
 
-  grouping redistribute-attributes {
+  grouping redistribute-isis-attributes {
     description
-      "Common optional attributes of any redistribute entry.";
+      "Additional attributes for ISIS redistribution";
+
+    leaf from-level {
+      type level;
+      description
+        "Source level for ISIS redistribution";
+    }
+
+    leaf to-level {
+      type level;
+      description
+        "Destination level for ISIS redistribution";
+    }
+  }
+
+  grouping redistribute-common-attributes {
+    description
+      "Common attributes for redistribution";
+
     leaf route-map {
       type frr-route-map:route-map-ref;
       description
-        "Applies the conditions of the specified route-map to routes that
-         are redistributed into this routing instance.";
+        "Route map reference";
     }
 
     leaf metric {
@@ -322,43 +339,33 @@ module frr-isisd {
       }
       default "0";
       description
-        "Metric used for the redistributed route. If 0,
-         the default-metric attribute is used instead.";
+        "Metric value";
+    }
+  }
+
+  grouping redistribute-attributes {
+    description
+      "Complete set of redistribute attributes with protocol-specific extensions";
+
+    uses redistribute-common-attributes;
+
+    uses redistribute-isis-attributes {
+      when "../protocol = 'isis'";
     }
   }
 
   grouping redistribute-default {
     description
-      "Redistribution of default route within a level.";
+      "Default route redistribution";
+
     leaf always {
       type boolean;
       default "false";
       description
-        "Always advertise default route.";
+        "Always advertise default route";
     }
 
-    uses redistribute-attributes;
-  }
-
-  grouping leaking-attributes {
-    description
-      "Common optional attributes of any leaking entry.";
-    leaf route-map {
-      type frr-route-map:route-map-ref;
-      description
-        "Applies the conditions of the specified route-map to routes that
-         are redistributed into this routing instance.";
-    }
-
-    leaf metric {
-      type uint32 {
-        range "0..16777215";
-      }
-      default "0";
-      description
-        "Metric used for the redistributed route. If 0,
-         the default-metric attribute is used instead.";
-    }
+    uses redistribute-common-attributes;
   }
 
   grouping isis-password {
@@ -2195,46 +2202,6 @@ module frr-isisd {
             description
               "Time to wait for LDP-Sync to occur before restoring interface metric.";
           }
-        }
-      }
-
-      container route_leaking {
-        description
-          "Redistributes routes learned from other routing protocols.";
-        list ipv4 {
-          key "protocol level";
-          description
-            "IPv4 route redistribution.";
-          leaf protocol {
-            type frr-route-types:frr-route-types-v4;
-            description
-              "Originating routing protocol for the IPv4 routes.";
-          }
-
-          leaf level {
-            type level;
-            description
-              "IS-IS level into which the routes should be redistributed.";
-          }
-
-          uses leaking-attributes;
-        }
-        list ipv6 {
-          key "protocol level";
-          description
-            "IPv6 route redistribution.";
-          leaf protocol {
-            type frr-route-types:frr-route-types-v6;
-            description
-              "Originating routing protocol for the IPv6 routes.";
-          }
-
-          leaf level {
-            type level;
-            description
-              "IS-IS level into which the routes should be redistributed.";
-          }
-         uses redistribute-attributes;
         }
       }
     }
